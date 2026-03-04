@@ -16,12 +16,26 @@
         <div class="mt-2 d-flex flex-wrap gap-2">
           {% for img in images %}
             <a href="{{ url_for('static', filename='uploads/' ~ img) }}" target="_blank">
-              <img src="{{ url_for('static', filename='uploads/' ~ img) }}" class="qu              <img src="{{ url_for('sta                <img src="or              <im>
-                                                 class="mt-3">
-      {% if not q      {% if not q      {% if not q      {% if not q     ze      {% if not q      {% if not q      {ost"      {% if not q      {% if not q      {% if not q      {% if not q     ze  ar como finalizado</button>
+              <img src="{{ url_for('static', filename='uploads/' ~ img) }}" class="quote-thumb" style="max-width:120px; max-height:120px; object-fit:cover; border-radius:4px;">
+            </a>
+          {% endfor %}
+        </div>
+      </li>
+      {% endif %}
+    </ul>
+
+    <div class="mt-3">
+      {% if not quote.finalized %}
+      <form action="{{ url_for('finalize_quote', quote_id=quote.id) }}" method="post" class="d-inline">
+        <button type="submit" class="btn btn-success">Marcar como finalizado</button>
       </form>
       {% else %}
       <form action="{{ url_for('unfinalize_quote', quote_id=quote.id) }}" method="post" class="d-inline">
-        <button type="submit" class        <button type="submit" class        <button typ/form        <button type="submit" class{{ url_for('in        <button type="submit" class       ol        <button type="subm>
+        <button type="submit" class="btn btn-warning">Reabrir orçamento</button>
+      </form>
+      {% endif %}
+      <a href="{{ url_for('index') }}" class="btn btn-secondary ms-2">Voltar</a>
+    </div>
+  </div>
 </div>
 {% endblock %}
