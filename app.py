@@ -28,6 +28,10 @@ class Quote(db.Model):
 with app.app_context():
     db.create_all()
 
+if __name__ == '__main__':
+    # local development server only
+    app.run(debug=True)
+
 @app.route('/')
 def index():
     quotes = Quote.query.all()
