@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <title>Ordem de Serviço {{ os.numero }}</title>
+  <style>
+    @page { size: A4; margin: 20mm; counter-increment: pages; }
+    @page :left { }
+    @page :right { }
+    body { font-family: Arial, sans-serif; font-size: 12px; margin: 20px; }
+    @media print {
+      button { display: none; }
+    }
+    header { display: flex; align-items: center; margin-bottom: 20px; }
+    header img { max-height: 80px; margin-right: 20px; }
+    .company-info { line-height: 1.2; }
+    .info-section { margin-bottom: 15px; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+    th, td { border: 1px solid #333; padding: 5px; }
+    th { background-color: #eee; }
+    .text-right { text-align: right; }
+    footer { position: fixed; bottom: 0; width: 100%; font-size: 10px; text-align: center; }
+    .page-number:after { content: counter(page); }
+    .total-pages:after { content: counter(pages); }
+    .nowrap { white-space: nowrap; }
+    .status { font-weight: bold; }
+  </style>
+</head>
+<body>
+<header>
+  {% if preview %}
+  <div style="position:absolute; right:20px; top:20px;">
+    <button onclick="window.print()" style="padding:4px 8px;">Imprimir</button>
+  </div>
+  {% endif %}
+  {% if config.logo_path %}
+  <img src="{{ config.logo_path }}" alt="Logo">
+  {% endif %}
+  <div class="company-info">
+    <div><strong>{{ config.nome_empresa }}</strong></div>
+    {% if config.endereco %}<div>{{ config.endereco }}</div>{% endif %}
+    {% if config.telefone1 %}<div>Tel: {{ config.telefone1 }}{% if config.telefone2 %} / {{ config.telefone2 }}{% endif %}</div>{% endif %}
+    {% if config.email %}<div>{{ config.email }}</div>{% endif %}
+  </div>
+</header>
+
+<section class="info-section">
+  <table>
+    <tr>
+      <td class="nowrap"><strong>OS Nº</strong> {{ os.numero }}</td>
+      <td class="nowrap"><strong>Data emissão</strong> {{ data_emissao }}</td>
+      <td class="nowrap"><strong>Status</strong> <span class="status">{{ os.status }}</span></td>
+    </tr>
+  </table>
+</section>
+
+<section class="info-section">
+  <h4>Dados do cliente</h4>
+  <div>{{ os.cliente.nome }}</div>
+  <div>{{ os.cliente.endereco }}</div>
+  {% if os.cliente.telefone %}<div>Tel: {{ os.cliente.telefone }}</div>{% endif %}
+</section>
+
+<section class="info-section">
+  <h4>Dados do veículo</h4>
+  <div>Marca/Modelo: {{ os.veiculo.marca }} / {{ os.veiculo.modelo }} - {{ os.veiculo.cor }} / {{ os.veiculo.ano }}</div>
+  <div>Placa: {{ os.veiculo.placa }}</div>
+  {% if os.veiculo.chassi %}<div>Chassi: {{ os.veiculo.chassi }}</div>{% endif %}
+  {% if os.veiculo.km %}<div>KM: {{ os.veiculo.km }}</div>{% endif %}
+</section>
+
+<section class="info-section">
+  <h4>Serviços</h4>
+  <table>
+    <thead><tr><th>Descrição</th><th class="text-right">Valor (R$)</th><th>✓</th></tr></thead>
+    <tbody>
+      {% for s in os.servicos %}
+      <tr>
+        <td>{{ s.descricao }}</td>
+        <td class="text-right">{{ '%.2f' % s.valor }}</td>
+        <td class="text-center">{% if s.realizado %}✔{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+    <tfoot>
+      <tr>
+        <td class="text-right"><strong>Total serviços</strong></td>
+        <td class="text-right"><strong>{{ '%.2f' % os.total_servicos() }}</strong></td>
+        <td></td>
+      </tr>
+    </tfoot>
+  </table>
+</section>
+
+<section class="info-section">
+  <h4>Produtos</h4>
+  <table>
+    <thead><tr><th>Descrição</th><th class="text-right">Valor Unit. (R$)</th><th class="text-right">Qtd</th><th class="text-right">Total (R$)</th><th>✓</th></tr></thead>
+    <tbody>
+      {% for p in os.produtos %}
+      <tr>
+        <td>{{ p.descricao }}</td>
+        <td class="text-right">{{ '%.2f' % p.valor_unitario }}</td>
+        <td class="text-right">{{ p.quantidade }}</td>
+        <td class="text-right">{{ '%.2f' % p.total }}</td>
+        <td class="text-center">{% if p.aplicado %}✔{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+    <tfoot>
+      <tr>
+        <td colspan="3" class="text-right"><strong>Total produtos</strong></td>
+        <td class="text-right"><strong>{{ '%.2f' % os.total_produtos() }}</strong></td>
+        <td></td>
+      </tr>
+    </tfoot>
+  </table>
+</section>
+
+<footer>
+  <div>Total geral: R$ {{ '%.2f' % os.total_geral() }}</div>
+  <div>Página <span class="page-number"></span> de <span class="total-pages"></span></div>
+</footer>
+</body>
+</html>

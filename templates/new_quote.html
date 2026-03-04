@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card mx-auto" style="max-width: 600px;">
+  <div class="card-body">
+    <h2 class="card-title mb-4">Nova Cotação</h2>
+    <form method="post">
+      <div class="mb-3">
+        <label for="plate" class="form-label">Placa do carro</label>
+        <input type="text" class="form-control" id="plate" name="plate" required>
+        <div id="history" class="small text-muted mt-2"></div>
+      </div>
+      <div class="mb-3">
+        <label for="model" class="form-label">Modelo do carro</label>
+        <input type="text" class="form-control" id="model" name="model" required>
+      </div>
+      <div class="mb-3">
+        <label for="parts" class="form-label">Peças (uma por linha)</label>
+        <textarea class="form-control" id="parts" name="parts" rows="3"></textarea>
+      </div>
+      <div class="mb-3">
+        <label for="labor_cost" class="form-label">Custo da mão de obra</label>
+        <input type="number" step="0.01" class="form-control" id="labor_cost" name="labor_cost" required>
+      </div>
+      <button type="submit" class="btn btn-primary">Salvar</button>
+      <a href="{{ url_for('index') }}" class="btn btn-secondary ms-2">Cancelar</a>
+    </form>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const plateInput = document.getElementById('plate');
+    const historyDiv = document.getElementById('history');
+
+    plateInput.addEventListener('blur', fetchHistory);
+    plateInput.addEventListener('change', fetchHistory);
+
+    function fetchHistory() {
+        const plate = plateInput.value.trim();
+        if (!plate) {
+            historyDiv.innerHTML = '';
+            return;
+        }
+        fetch(`/history/${encodeURIComponent(plate)}`)
+            .then(r => r.json())
+            .then(data => {
+                if (data.length === 0) {
+                    historyDiv.textContent = 'Nenhuma visita ou orçamento anterior para essa placa.';
+                    return;
+                }
+                let html = '<strong>Histórico:</strong> ';
+                html += data.map(q => `#${q.id} ${q.model} (R$ ${q.labor_cost.toFixed(2)})`).join(' | ');
+                historyDiv.innerHTML = html;
+            })
+            .catch(err => {
+                historyDiv.textContent = 'Erro ao buscar histórico.';
+                console.error(err);
+            });
+    }
+});
+</script>
+{% endblock %}

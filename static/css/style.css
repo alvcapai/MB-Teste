@@ -1,0 +1,48 @@
+/* Custom blue theme for MB UX style */
+:root {
+    --primary-color: #007bff;
+    --primary-dark: #0056b3;
+    --secondary-color: #6c757d;
+    --bg-light: #f8f9fa;
+}
+
+body {
+    background-color: var(--bg-light);
+}
+
+.navbar {
+    background-color: var(--primary-color) !important;
+}
+.navbar .navbar-brand,
+.navbar .nav-link {
+    color: #fff !important;
+}
+.navbar .nav-link:hover {
+    color: var(--primary-dark) !important;
+}
+
+.table thead {
+    background-color: var(--primary-color);
+    color: #fff;
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+.btn-primary:hover {
+    background-color: var(--primary-dark);
+    border-color: var(--primary-dark);
+}
+
+.card {
+    border: none;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+.footer {
+    text-align: center;
+    padding: 1rem 0;
+    color: var(--secondary-color);
+}

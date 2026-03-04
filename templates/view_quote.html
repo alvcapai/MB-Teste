@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card mx-auto" style="max-width: 600px;">
+  <div class="card-body">
+    <h2 class="card-title">Cotação #{{ quote.id }}</h2>
+    <ul class="list-group list-group-flush">
+      <li class="list-group-item"><strong>Placa:</strong> {{ quote.plate }}</li>
+      <li class="list-group-item"><strong>Modelo:</strong> {{ quote.model }}</li>
+      <li class="list-group-item"><strong>Custo da mão de obra:</strong> R$ {{ '%.2f' % quote.labor_cost }}</li>
+      <li class="list-group-item"><strong>Peças:</strong>
+        <pre>{{ quote.parts }}</pre>
+      </li>
+    </ul>
+    <a href="{{ url_for('index') }}" class="btn btn-secondary mt-3">Voltar</a>
+  </div>
+</div>
+{% endblock %}
