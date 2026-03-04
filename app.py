@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, jsonify, Response
+from flask import Flask, render_template, request, redirect, url_for, jsonify, Response, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from datetime import date
 import os
@@ -9,10 +9,16 @@ from werkzeug.utils import secure_filename
 app = Flask(__name__)
 
 basedir = os.path.abspath(os.path.dirname(__file__))
-db_path = os.path.join(basedir, 'quotes.db')
+
+# DATA_DIR points to a persistent disk mount on Render (or any host).
+# Set the DATA_DIR environment variable to the mount path in your dashboard.
+# Locally it falls back to the project directory.
+_DATA_DIR = os.environ.get('DATA_DIR', basedir)
+
+db_path = os.path.join(_DATA_DIR, 'quotes.db')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + db_path
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['UPLOAD_FOLDER'] = os.path.join(basedir, 'static', 'uploads')
+app.config['UPLOAD_FOLDER'] = os.path.join(_DATA_DIR, 'uploads')
 app.config['MAX_CONTENT_LENGTH'] = 8 * 1024 * 1024
 
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
@@ -168,6 +174,11 @@ def delete_item(quote_id, item_id):
     db.session.delete(item)
     db.session.commit()
     return redirect(url_for('view_quote', quote_id=quote_id))
+
+
+@app.route('/uploads/<path:filename>')
+def uploaded_file(filename):
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 
 @app.route('/history/<plate>')
