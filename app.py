@@ -2,6 +2,9 @@ from flask import Flask, render_template, request, redirect, url_for, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from datetime import date
 import os
+import uuid
+import json
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 
@@ -9,6 +12,11 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 db_path = os.path.join(basedir, 'quotes.db')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + db_path
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['UPLOAD_FOLDER'] = os.path.join(basedir, 'static', 'uploads')
+app.config['MAX_CONTENT_LENGTH'] = 8 * 1024 * 1024  # 8MB limit per request (approx)
+
+# ensure upload dir exists
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 db = SQLAlchemy(app)
 
@@ -18,6 +26,8 @@ class Quote(db.Model):
     model = db.Column(db.String(80), nullable=False)
     parts = db.Column(db.Text, nullable=True)
     labor_cost = db.Column(db.Float, nullable=False, default=0.0)
+    # JSON array (as text) with filenames stored under static/uploads
+    images = db.Column(db.Text, nullable=True)
 
     def __repr__(self):
         return f"<Quote {self.plate} {self.model}>"
@@ -49,7 +59,25 @@ def new_quote():
         except ValueError:
             labor_cost = 0.0
 
-        quote = Quote(plate=plate, model=model, parts=parts, labor_cost=labor_cost)
+        # handle uploaded photos (input name: photos)
+        saved_files = []
+        files = request.files.getlist('photos') if 'photos' in request.files else []
+        for f in files:
+            if f and f.filename:
+                filename = secure_filename(f.filename)
+                # generate unique name to avoid collisions
+                unique_name = f"{uuid.uuid4().hex}_{filename}"
+                dest = os.path.join(app.config['UPLOAD_FOLDER'], unique_name)
+                try:
+                    f.save(dest)
+                    saved_files.append(unique_name)
+                except Exception:
+                    # skip problematic files
+                    continue
+
+        images_json = json.dumps(saved_files) if saved_files else None
+
+        quote = Quote(plate=plate, model=model, parts=parts, labor_cost=labor_cost, images=images_json)
         db.session.add(quote)
         db.session.commit()
         return redirect(url_for('index'))
@@ -58,7 +86,13 @@ def new_quote():
 @app.route('/quote/<int:quote_id>')
 def view_quote(quote_id):
     quote = Quote.query.get_or_404(quote_id)
-    return render_template('view_quote.html', quote=quote)
+    images = []
+    if quote.images:
+        try:
+            images = json.loads(quote.images)
+        except Exception:
+            images = []
+    return render_template('view_quote.html', quote=quote, images=images)
 
 @app.route('/history/<plate>')
 def history(plate):

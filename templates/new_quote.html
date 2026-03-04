@@ -9,6 +9,23 @@
         <input type="text" class="form-control" id="plate" name="plate" required>
         <div id="history" class="small text-muted mt-2"></div>
       </div>
+          <div class="mb-3">
+            <label class="form-label">Fotos do veículo</label>
+            <div class="d-flex align-items-center gap-2">
+              <!-- visible camera button that triggers the hidden file input -->
+              <label for="photos" class="btn btn-outline-primary d-inline-flex align-items-center" title="Adicionar fotos">
+                <!-- simple camera SVG -->
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-camera" viewBox="0 0 16 16">
+                  <path d="M9 2a1 1 0 0 1 .894.553L10.382 3H13a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h2.618l.488-1.447A1 1 0 0 1 7 2h2z"/>
+                  <path d="M8 5a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/>
+                </svg>
+                <span class="ms-2">Tirar/Anexar</span>
+              </label>
+              <small class="text-muted">(use câmera em celulares)</small>
+            </div>
+            <input type="file" id="photos" name="photos" accept="image/*" capture="environment" multiple style="display:none">
+            <div id="photo-previews" class="mt-2 d-flex flex-wrap gap-2"></div>
+          </div>
       <div class="mb-3">
         <label for="model" class="form-label">Modelo do carro</label>
         <input type="text" class="form-control" id="model" name="model" required>
@@ -57,6 +74,31 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.error(err);
             });
     }
+});
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const photosInput = document.getElementById('photos');
+  const previews = document.getElementById('photo-previews');
+
+  photosInput.addEventListener('change', function() {
+    previews.innerHTML = '';
+    const files = Array.from(photosInput.files || []);
+    files.forEach(file => {
+      if (!file.type.startsWith('image/')) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const img = document.createElement('img');
+        img.src = e.target.result;
+        img.style.width = '80px';
+        img.style.height = '80px';
+        img.style.objectFit = 'cover';
+        img.className = 'rounded';
+        previews.appendChild(img);
+      };
+      reader.readAsDataURL(file);
+    });
+  });
 });
 </script>
 {% endblock %}

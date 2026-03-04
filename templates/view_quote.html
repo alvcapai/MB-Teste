@@ -10,6 +10,18 @@
       <li class="list-group-item"><strong>Peças:</strong>
         <pre>{{ quote.parts }}</pre>
       </li>
+      {% if images and images|length > 0 %}
+      <li class="list-group-item">
+        <strong>Fotos:</strong>
+        <div class="mt-2 d-flex flex-wrap gap-2">
+          {% for img in images %}
+            <a href="{{ url_for('static', filename='uploads/' ~ img) }}" target="_blank">
+              <img src="{{ url_for('static', filename='uploads/' ~ img) }}" class="quote-thumb rounded" alt="foto">
+            </a>
+          {% endfor %}
+        </div>
+      </li>
+      {% endif %}
     </ul>
     <a href="{{ url_for('index') }}" class="btn btn-secondary mt-3">Voltar</a>
   </div>
