@@ -50,7 +50,7 @@
       <div class="modal-body">
         <p class="text-muted mb-3">Deseja imprimir ou enviar o orçamento antes de finalizar?</p>
         <div class="d-grid gap-2">
-          <a href="{{ url_for('quote_pdf', quote_id=quote.id) }}" target="_blank" class="btn btn-outline-primary">
+          <a href="{{ url_for('quote_print', quote_id=quote.id) }}" target="_blank" class="btn btn-outline-primary">
             Imprimir / Baixar PDF
           </a>
           <button type="button" class="btn btn-outline-success" onclick="shareWhatsApp()">
@@ -69,23 +69,7 @@
 </div>
 
 <script>
-async function shareWhatsApp() {
-  const pdfUrl = "{{ url_for('quote_pdf', quote_id=quote.id) }}";
-
-  // Mobile: try Web Share API to share the actual PDF file
-  if (navigator.canShare) {
-    try {
-      const resp = await fetch(pdfUrl);
-      const blob = await resp.blob();
-      const file = new File([blob], "cotacao_{{ quote.id }}.pdf", { type: "application/pdf" });
-      if (navigator.canShare({ files: [file] })) {
-        await navigator.share({ files: [file], title: "Cotação #{{ quote.id }}" });
-        return;
-      }
-    } catch (e) { /* fall through */ }
-  }
-
-  // Desktop fallback: open WhatsApp with text summary
+function shareWhatsApp() {
   const msg = [
     "*Cotação #{{ quote.id }}*",
     "Placa: {{ quote.plate }}",

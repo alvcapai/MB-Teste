@@ -137,50 +137,42 @@ def finalized_quotes():
     return render_template('finalized.html', quotes=quotes)
 
 
-@app.route('/quote/<int:quote_id>/pdf')
-def quote_pdf(quote_id):
+@app.route('/quote/<int:quote_id>/print')
+def quote_print(quote_id):
     q = Quote.query.get_or_404(quote_id)
-    from io import BytesIO
-    from reportlab.pdfgen import canvas
-    from reportlab.lib.pagesizes import A4
 
-    def safe(s):
-        if not s:
-            return ''
-        return s.encode('latin-1', errors='replace').decode('latin-1')
+    servicos = []
+    if q.labor_cost and q.labor_cost > 0:
+        servicos.append(ItemServico(descricao='Mão de obra', valor=q.labor_cost, realizado=True))
 
-    buffer = BytesIO()
-    c = canvas.Canvas(buffer, pagesize=A4)
-    _, height = A4
-    y = height - 50
-
-    c.setFont("Helvetica-Bold", 16)
-    c.drawString(40, y, safe(f"Cotacao #{q.id}"))
-    y -= 30
-
-    c.setFont("Helvetica", 12)
-    c.drawString(40, y, safe(f"Placa: {q.plate}")); y -= 20
-    c.drawString(40, y, safe(f"Modelo: {q.model}")); y -= 20
-    c.drawString(40, y, safe(f"Mao de obra: R$ {q.labor_cost:.2f}")); y -= 30
-
+    produtos = []
     if q.parts:
-        c.setFont("Helvetica-Bold", 12)
-        c.drawString(40, y, "Pecas:"); y -= 18
-        c.setFont("Helvetica", 11)
         for line in q.parts.splitlines():
-            if y < 60:
-                c.showPage()
-                y = height - 40
-                c.setFont("Helvetica", 11)
-            c.drawString(60, y, safe(line)); y -= 16
+            line = line.strip()
+            if line:
+                produtos.append(ItemProduto(descricao=line, valor_unitario=0.0, quantidade=1, total=0.0, aplicado=True))
 
-    c.showPage()
-    c.save()
-    buffer.seek(0)
-    return (buffer.read(), 200, {
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': f'inline; filename="cotacao_{q.id}.pdf"'
-    })
+    os_obj = OrdemDeServico(
+        numero=q.id,
+        data_emissao=date.today(),
+        status='FINALIZADA' if q.finalized else 'ABERTA',
+        cliente=Cliente(nome='—', endereco='—'),
+        veiculo=Veiculo(marca='', modelo=q.model, cor='', ano='', placa=q.plate),
+        servicos=servicos,
+        produtos=produtos,
+    )
+    config = ConfigEmpresa(
+        nome_empresa='Oficina MB',
+        endereco='Av. Exemplo, 456',
+        telefone1='(11) 1234-5678',
+        telefone2='(11) 8765-4321',
+        email='contato@oficinamb.com',
+        logo_path=None,
+    )
+    template = env.get_template('os_template.html')
+    data_emissao = os_obj.data_emissao.strftime('%d/%m/%Y')
+    html = template.render(os=os_obj, config=config, data_emissao=data_emissao, preview=True)
+    return html
 
 
 @app.route('/quote/<int:quote_id>/finalize', methods=['POST'])
