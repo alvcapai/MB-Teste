@@ -22,6 +22,12 @@ class Quote(db.Model):
     def __repr__(self):
         return f"<Quote {self.plate} {self.model}>"
 
+# Ensure the database tables are created on application startup. This
+# runs under an application context so it works when Gunicorn imports
+# the app.
+with app.app_context():
+    db.create_all()
+
 @app.route('/')
 def index():
     quotes = Quote.query.all()
@@ -108,8 +114,5 @@ def os_pdf():
 
 
 if __name__ == '__main__':
-    # create database if not exists
-    if not os.path.exists(db_path):
-        with app.app_context():
-            db.create_all()
+    # local development server only
     app.run(debug=True)
