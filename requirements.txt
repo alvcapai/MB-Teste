@@ -1,5 +1,5 @@
 Flask==2.3.2
 Flask-SQLAlchemy==3.0.3
 # ReportLab for lightweight PDF generation (optional)
-reportlab==3.6.15
+reportlab==3.6.13
 gunicorn
