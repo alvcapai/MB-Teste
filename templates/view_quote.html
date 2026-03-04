@@ -26,9 +26,9 @@
 
     <div class="mt-3">
       {% if not quote.finalized %}
-      <form action="{{ url_for('finalize_quote', quote_id=quote.id) }}" method="post" class="d-inline">
-        <button type="submit" class="btn btn-success">Marcar como finalizado</button>
-      </form>
+      <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#finalizeModal">
+        Marcar como finalizado
+      </button>
       {% else %}
       <form action="{{ url_for('unfinalize_quote', quote_id=quote.id) }}" method="post" class="d-inline">
         <button type="submit" class="btn btn-warning">Reabrir orçamento</button>
@@ -38,4 +38,62 @@
     </div>
   </div>
 </div>
+
+<!-- Modal: opções ao finalizar -->
+<div class="modal fade" id="finalizeModal" tabindex="-1" aria-labelledby="finalizeModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="finalizeModalLabel">Finalizar Cotação #{{ quote.id }}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted mb-3">Deseja imprimir ou enviar o orçamento antes de finalizar?</p>
+        <div class="d-grid gap-2">
+          <a href="{{ url_for('quote_pdf', quote_id=quote.id) }}" target="_blank" class="btn btn-outline-primary">
+            Imprimir / Baixar PDF
+          </a>
+          <button type="button" class="btn btn-outline-success" onclick="shareWhatsApp()">
+            Enviar via WhatsApp
+          </button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <form action="{{ url_for('finalize_quote', quote_id=quote.id) }}" method="post" class="d-inline">
+          <button type="submit" class="btn btn-success">Finalizar</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+async function shareWhatsApp() {
+  const pdfUrl = "{{ url_for('quote_pdf', quote_id=quote.id) }}";
+
+  // Mobile: try Web Share API to share the actual PDF file
+  if (navigator.canShare) {
+    try {
+      const resp = await fetch(pdfUrl);
+      const blob = await resp.blob();
+      const file = new File([blob], "cotacao_{{ quote.id }}.pdf", { type: "application/pdf" });
+      if (navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: "Cotação #{{ quote.id }}" });
+        return;
+      }
+    } catch (e) { /* fall through */ }
+  }
+
+  // Desktop fallback: open WhatsApp with text summary
+  const msg = [
+    "*Cotação #{{ quote.id }}*",
+    "Placa: {{ quote.plate }}",
+    "Modelo: {{ quote.model }}",
+    "Mão de obra: R$ {{ '%.2f' % quote.labor_cost }}",
+    {% if quote.parts %}"Peças:\n{{ quote.parts | replace('\n', '\\n') | replace('"', '\\"') }}"{% endif %}
+  ].join("\n");
+  window.open("https://wa.me/?text=" + encodeURIComponent(msg), "_blank");
+}
+</script>
 {% endblock %}

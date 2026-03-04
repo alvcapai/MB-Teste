@@ -137,6 +137,52 @@ def finalized_quotes():
     return render_template('finalized.html', quotes=quotes)
 
 
+@app.route('/quote/<int:quote_id>/pdf')
+def quote_pdf(quote_id):
+    q = Quote.query.get_or_404(quote_id)
+    from io import BytesIO
+    from reportlab.pdfgen import canvas
+    from reportlab.lib.pagesizes import A4
+
+    def safe(s):
+        if not s:
+            return ''
+        return s.encode('latin-1', errors='replace').decode('latin-1')
+
+    buffer = BytesIO()
+    c = canvas.Canvas(buffer, pagesize=A4)
+    _, height = A4
+    y = height - 50
+
+    c.setFont("Helvetica-Bold", 16)
+    c.drawString(40, y, safe(f"Cotacao #{q.id}"))
+    y -= 30
+
+    c.setFont("Helvetica", 12)
+    c.drawString(40, y, safe(f"Placa: {q.plate}")); y -= 20
+    c.drawString(40, y, safe(f"Modelo: {q.model}")); y -= 20
+    c.drawString(40, y, safe(f"Mao de obra: R$ {q.labor_cost:.2f}")); y -= 30
+
+    if q.parts:
+        c.setFont("Helvetica-Bold", 12)
+        c.drawString(40, y, "Pecas:"); y -= 18
+        c.setFont("Helvetica", 11)
+        for line in q.parts.splitlines():
+            if y < 60:
+                c.showPage()
+                y = height - 40
+                c.setFont("Helvetica", 11)
+            c.drawString(60, y, safe(line)); y -= 16
+
+    c.showPage()
+    c.save()
+    buffer.seek(0)
+    return (buffer.read(), 200, {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': f'inline; filename="cotacao_{q.id}.pdf"'
+    })
+
+
 @app.route('/quote/<int:quote_id>/finalize', methods=['POST'])
 def finalize_quote(quote_id):
     q = Quote.query.get_or_404(quote_id)
