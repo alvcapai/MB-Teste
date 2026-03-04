@@ -3,41 +3,60 @@
 <div class="card mx-auto" style="max-width: 600px;">
   <div class="card-body">
     <h2 class="card-title mb-4">Nova Cotação</h2>
-    <form method="post">
+    <form method="post" enctype="multipart/form-data">
       <div class="mb-3">
         <label for="plate" class="form-label">Placa do carro</label>
         <input type="text" class="form-control" id="plate" name="plate" required>
         <div id="history" class="small text-muted mt-2"></div>
       </div>
-          <div class="mb-3">
-            <label class="form-label">Fotos do veículo</label>
-            <div class="d-flex align-items-center gap-2">
-              <!-- visible camera button that triggers the hidden file input -->
-              <label for="photos" class="btn btn-outline-primary d-inline-flex align-items-center" title="Adicionar fotos">
-                <!-- simple camera SVG -->
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-camera" viewBox="0 0 16 16">
-                  <path d="M9 2a1 1 0 0 1 .894.553L10.382 3H13a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h2.618l.488-1.447A1 1 0 0 1 7 2h2z"/>
-                  <path d="M8 5a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/>
-                </svg>
-                <span class="ms-2">Tirar/Anexar</span>
-              </label>
-              <small class="text-muted">(use câmera em celulares)</small>
-            </div>
-            <input type="file" id="photos" name="photos" accept="image/*" capture="environment" multiple style="display:none">
-            <div id="photo-previews" class="mt-2 d-flex flex-wrap gap-2"></div>
-          </div>
+
+      <div class="mb-3">
+        <label class="form-label">Fotos do veículo</label>
+        <div class="d-flex align-items-center gap-2">
+          <label for="photos" class="btn btn-outline-primary d-inline-flex align-items-center" title="Adicionar fotos">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-camera" viewBox="0 0 16 16">
+              <path d="M9 2a1 1 0 0 1 .894.553L10.382 3H13a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h2.618l.488-1.447A1 1 0 0 1 7 2h2z"/>
+              <path d="M8 5a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/>
+            </svg>
+            <span class="ms-2">Tirar/Anexar</span>
+          </label>
+          <small class="text-muted">(use câmera em celulares)</small>
+        </div>
+        <input type="file" id="photos" name="photos" accept="image/*" capture="environment" multiple style="display:none">
+        <div id="photo-previews" class="mt-2 d-flex flex-wrap gap-2"></div>
+      </div>
+
       <div class="mb-3">
         <label for="model" class="form-label">Modelo do carro</label>
         <input type="text" class="form-control" id="model" name="model" required>
       </div>
+
       <div class="mb-3">
-        <label for="parts" class="form-label">Peças (uma por linha)</label>
-        <textarea class="form-control" id="parts" name="parts" rows="3"></textarea>
+        <label for="labor_cost" class="form-label">Custo da mão de obra (R$)</label>
+        <input type="number" step="0.01" class="form-control" id="labor_cost" name="labor_cost" value="0.00" required>
       </div>
+
+      <!-- Structured items -->
       <div class="mb-3">
-        <label for="labor_cost" class="form-label">Custo da mão de obra</label>
-        <input type="number" step="0.01" class="form-control" id="labor_cost" name="labor_cost" required>
+        <label class="form-label">Peças / Serviços</label>
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered" id="items-table">
+            <thead class="table-secondary">
+              <tr>
+                <th>Descrição</th>
+                <th style="width:80px">Qtd</th>
+                <th style="width:110px">Valor (R$)</th>
+                <th style="width:36px"></th>
+              </tr>
+            </thead>
+            <tbody id="items-body">
+              <!-- rows added via JS -->
+            </tbody>
+          </table>
+        </div>
+        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="addRow()">+ Adicionar peça</button>
       </div>
+
       <button type="submit" class="btn btn-primary">Salvar</button>
       <a href="{{ url_for('index') }}" class="btn btn-secondary ms-2">Cancelar</a>
     </form>
@@ -45,54 +64,52 @@
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const plateInput = document.getElementById('plate');
-    const historyDiv = document.getElementById('history');
+function addRow(desc='', qtd='1', val='0.00') {
+  const tbody = document.getElementById('items-body');
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td><input type="text" name="descricao[]" class="form-control form-control-sm" value="${desc}" placeholder="Ex: Filtro de óleo"></td>
+    <td><input type="number" name="quantidade[]" class="form-control form-control-sm" value="${qtd}" min="0.01" step="any"></td>
+    <td><input type="number" name="valor[]" class="form-control form-control-sm" value="${val}" min="0" step="0.01"></td>
+    <td><button type="button" class="btn btn-link btn-sm text-danger p-0" onclick="this.closest('tr').remove()" title="Remover">✕</button></td>
+  `;
+  tbody.appendChild(tr);
+}
 
-    plateInput.addEventListener('blur', fetchHistory);
-    plateInput.addEventListener('change', fetchHistory);
+// start with one empty row
+addRow();
 
-    function fetchHistory() {
-        const plate = plateInput.value.trim();
-        if (!plate) {
-            historyDiv.innerHTML = '';
-            return;
-        }
-        fetch(`/history/${encodeURIComponent(plate)}`)
-            .then(r => r.json())
-            .then(data => {
-                if (data.length === 0) {
-                    historyDiv.textContent = 'Nenhuma visita ou orçamento anterior para essa placa.';
-                    return;
-                }
-                let html = '<strong>Histórico:</strong> ';
-                html += data.map(q => `#${q.id} ${q.model} (R$ ${q.labor_cost.toFixed(2)})`).join(' | ');
-                historyDiv.innerHTML = html;
-            })
-            .catch(err => {
-                historyDiv.textContent = 'Erro ao buscar histórico.';
-                console.error(err);
-            });
-    }
-});
-</script>
-<script>
 document.addEventListener('DOMContentLoaded', function() {
+  const plateInput = document.getElementById('plate');
+  const historyDiv = document.getElementById('history');
+
+  function fetchHistory() {
+    const plate = plateInput.value.trim();
+    if (!plate) { historyDiv.innerHTML = ''; return; }
+    fetch(`/history/${encodeURIComponent(plate)}`)
+      .then(r => r.json())
+      .then(data => {
+        if (!data.length) { historyDiv.textContent = 'Nenhuma visita anterior para essa placa.'; return; }
+        historyDiv.innerHTML = '<strong>Histórico:</strong> ' +
+          data.map(q => `#${q.id} ${q.model} (R$ ${q.labor_cost.toFixed(2)})`).join(' | ');
+      })
+      .catch(() => { historyDiv.textContent = 'Erro ao buscar histórico.'; });
+  }
+
+  plateInput.addEventListener('blur', fetchHistory);
+  plateInput.addEventListener('change', fetchHistory);
+
   const photosInput = document.getElementById('photos');
   const previews = document.getElementById('photo-previews');
-
   photosInput.addEventListener('change', function() {
     previews.innerHTML = '';
-    const files = Array.from(photosInput.files || []);
-    files.forEach(file => {
+    Array.from(photosInput.files || []).forEach(file => {
       if (!file.type.startsWith('image/')) return;
       const reader = new FileReader();
-      reader.onload = function(e) {
+      reader.onload = e => {
         const img = document.createElement('img');
         img.src = e.target.result;
-        img.style.width = '80px';
-        img.style.height = '80px';
-        img.style.objectFit = 'cover';
+        img.style.cssText = 'width:80px;height:80px;object-fit:cover';
         img.className = 'rounded';
         previews.appendChild(img);
       };

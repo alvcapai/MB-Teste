@@ -1,30 +1,98 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="card mx-auto" style="max-width: 600px;">
+<div class="card mx-auto" style="max-width: 680px;">
   <div class="card-body">
-    <h2 class="card-title">Cotação #{{ quote.id }}</h2>
-    <ul class="list-group list-group-flush">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h2 class="card-title mb-0">Cotação #{{ quote.id }}</h2>
+      <a href="{{ url_for('edit_quote', quote_id=quote.id) }}" class="btn btn-outline-secondary btn-sm">Editar</a>
+    </div>
+
+    <ul class="list-group list-group-flush mb-4">
       <li class="list-group-item"><strong>Placa:</strong> {{ quote.plate }}</li>
       <li class="list-group-item"><strong>Modelo:</strong> {{ quote.model }}</li>
-      <li class="list-group-item"><strong>Custo da mão de obra:</strong> R$ {{ '%.2f' % quote.labor_cost }}</li>
-      <li class="list-group-item"><strong>Peças:</strong>
-        <pre>{{ quote.parts }}</pre>
-      </li>
-      {% if images and images|length > 0 %}
-      <li class="list-group-item">
-        <strong>Fotos:</strong>
-        <div class="mt-2 d-flex flex-wrap gap-2">
-          {% for img in images %}
-            <a href="{{ url_for('static', filename='uploads/' ~ img) }}" target="_blank">
-              <img src="{{ url_for('static', filename='uploads/' ~ img) }}" class="quote-thumb" style="max-width:120px; max-height:120px; object-fit:cover; border-radius:4px;">
-            </a>
-          {% endfor %}
-        </div>
-      </li>
-      {% endif %}
+      <li class="list-group-item"><strong>Mão de obra:</strong> R$ {{ '%.2f' % quote.labor_cost }}</li>
     </ul>
 
-    <div class="mt-3">
+    <!-- Items table -->
+    <h5>Peças / Serviços</h5>
+    {% set items = quote.items %}
+    {% if items %}
+    <div class="table-responsive mb-2">
+      <table class="table table-sm table-bordered align-middle">
+        <thead class="table-dark">
+          <tr>
+            <th>Descrição</th>
+            <th class="text-end" style="width:70px">Qtd</th>
+            <th class="text-end" style="width:100px">Valor Unit.</th>
+            <th class="text-end" style="width:100px">Total</th>
+            <th style="width:40px"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in items %}
+          <tr>
+            <td>{{ item.descricao }}</td>
+            <td class="text-end">{{ '%g' % item.quantidade }}</td>
+            <td class="text-end">R$ {{ '%.2f' % item.valor }}</td>
+            <td class="text-end">R$ {{ '%.2f' % item.total }}</td>
+            <td class="text-center">
+              <form action="{{ url_for('delete_item', quote_id=quote.id, item_id=item.id) }}" method="post">
+                <button type="submit" class="btn btn-link btn-sm text-danger p-0" title="Remover">✕</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr class="fw-bold">
+            <td colspan="3" class="text-end">Total peças</td>
+            <td class="text-end">R$ {{ '%.2f' % items|sum(attribute='total') }}</td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+    {% elif quote.parts %}
+    <pre class="border rounded p-2 bg-light small mb-2">{{ quote.parts }}</pre>
+    {% else %}
+    <p class="text-muted small mb-2">Nenhuma peça adicionada.</p>
+    {% endif %}
+
+    <!-- Add item form -->
+    <form action="{{ url_for('add_item', quote_id=quote.id) }}" method="post" class="mb-4">
+      <div class="row g-2 align-items-end">
+        <div class="col-12 col-sm-5">
+          <label class="form-label form-label-sm mb-1">Descrição</label>
+          <input type="text" name="descricao" class="form-control form-control-sm" placeholder="Ex: Filtro de óleo" required>
+        </div>
+        <div class="col-5 col-sm-3">
+          <label class="form-label form-label-sm mb-1">Quantidade</label>
+          <input type="number" name="quantidade" class="form-control form-control-sm" value="1" min="0.01" step="any" required>
+        </div>
+        <div class="col-5 col-sm-3">
+          <label class="form-label form-label-sm mb-1">Valor unit. (R$)</label>
+          <input type="number" name="valor" class="form-control form-control-sm" value="0.00" min="0" step="0.01" required>
+        </div>
+        <div class="col-2 col-sm-1 d-flex align-items-end">
+          <button type="submit" class="btn btn-success btn-sm w-100" title="Adicionar">+</button>
+        </div>
+      </div>
+    </form>
+
+    <!-- Photos -->
+    {% if images and images|length > 0 %}
+    <h5>Fotos</h5>
+    <div class="d-flex flex-wrap gap-2 mb-4">
+      {% for img in images %}
+        <a href="{{ url_for('static', filename='uploads/' ~ img) }}" target="_blank">
+          <img src="{{ url_for('static', filename='uploads/' ~ img) }}" style="max-width:110px; max-height:110px; object-fit:cover; border-radius:6px;">
+        </a>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Actions -->
+    <div class="d-flex flex-wrap gap-2 mt-2">
       {% if not quote.finalized %}
       <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#finalizeModal">
         Marcar como finalizado
@@ -34,7 +102,7 @@
         <button type="submit" class="btn btn-warning">Reabrir orçamento</button>
       </form>
       {% endif %}
-      <a href="{{ url_for('index') }}" class="btn btn-secondary ms-2">Voltar</a>
+      <a href="{{ url_for('index') }}" class="btn btn-secondary">Voltar</a>
     </div>
   </div>
 </div>
@@ -53,7 +121,7 @@
           <a href="{{ url_for('quote_print', quote_id=quote.id) }}" target="_blank" class="btn btn-outline-primary">
             Imprimir / Baixar PDF
           </a>
-          <button type="button" class="btn btn-outline-success" onclick="shareWhatsApp()">
+          <button type="button" class="btn btn-outline-success" id="btnWhatsapp" onclick="shareWhatsApp()">
             Enviar via WhatsApp
           </button>
         </div>
@@ -69,14 +137,41 @@
 </div>
 
 <script>
-function shareWhatsApp() {
+async function shareWhatsApp() {
+  const btn = document.getElementById('btnWhatsapp');
+  btn.disabled = true;
+  btn.textContent = 'Gerando PDF…';
+
+  try {
+    const resp = await fetch("{{ url_for('quote_pdf', quote_id=quote.id) }}");
+    if (!resp.ok) throw new Error('Falha ao gerar PDF');
+    const blob = await resp.blob();
+    const file = new File([blob], "cotacao_{{ quote.id }}.pdf", { type: 'application/pdf' });
+
+    // Mobile: native share sheet (can send file directly to WhatsApp)
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({ files: [file], title: 'Cotação #{{ quote.id }}' });
+      return;
+    }
+  } catch (e) {
+    // fall through to text fallback
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Enviar via WhatsApp';
+  }
+
+  // Desktop fallback: open WhatsApp Web with text summary
   const msg = [
     "*Cotação #{{ quote.id }}*",
     "Placa: {{ quote.plate }}",
     "Modelo: {{ quote.model }}",
     "Mão de obra: R$ {{ '%.2f' % quote.labor_cost }}",
-    {% if quote.parts %}"Peças:\n{{ quote.parts | replace('\n', '\\n') | replace('"', '\\"') }}"{% endif %}
-  ].join("\n");
+    {% if quote.items %}
+    "Peças:\n" + {{ quote.items | map(attribute='descricao') | list | tojson }}.join('\n'),
+    {% elif quote.parts %}
+    "Peças:\n{{ quote.parts | replace('\n', '\\n') | replace('"', '\\"') }}",
+    {% endif %}
+  ].filter(Boolean).join("\n");
   window.open("https://wa.me/?text=" + encodeURIComponent(msg), "_blank");
 }
 </script>
