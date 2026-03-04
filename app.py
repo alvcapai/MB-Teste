@@ -28,15 +28,30 @@ class Quote(db.Model):
     labor_cost = db.Column(db.Float, nullable=False, default=0.0)
     # JSON array (as text) with filenames stored under static/uploads
     images = db.Column(db.Text, nullable=True)
+    # indicates whether the quote has been finished/finalized
+    finalized = db.Column(db.Boolean, nullable=False, default=False)
 
     def __repr__(self):
-        return f"<Quote {self.plate} {self.model}>"
+        return f"<Quote {self.plate} {self.model} {'(finalizado)' if self.finalized else ''}>"
 
 # Ensure the database tables are created on application startup. This
 # runs under an application context so it works when Gunicorn imports
 # the app.
 with app.app_context():
     db.create_all()
+    # if the database already existed before we added the `finalized` column,
+    # add it now so the application continues working without a full migration
+    from sqlalchemy import inspect
+    inspector = inspect(db.engine)
+    cols = [c.get('name') for c in inspector.get_columns(Quote.__tablename__)]
+    if 'finalized' not in cols:
+        # SQLite doesn't support ALTER TABLE ADD COLUMN with a non-null default easily,
+        # but this will add the column with default 0 and update existing rows automatically.
+        try:
+            db.engine.execute('ALTER TABLE quote ADD COLUMN finalized BOOLEAN NOT NULL DEFAULT 0')
+        except Exception:
+            # if anything goes wrong, just ignore – the column may already exist
+            pass
 
 if __name__ == '__main__':
     # local development server only
@@ -44,7 +59,8 @@ if __name__ == '__main__':
 
 @app.route('/')
 def index():
-    quotes = Quote.query.all()
+    # only show cars/quotes that are still in progress (not finalizados)
+    quotes = Quote.query.filter_by(finalized=False).all()
     return render_template('index.html', quotes=quotes)
 
 @app.route('/new', methods=['GET', 'POST'])
@@ -96,7 +112,7 @@ def view_quote(quote_id):
 
 @app.route('/history/<plate>')
 def history(plate):
-    # return a short list of previous quotes for this plate
+    # return a short list of previous quotes for this plate (regardless of status)
     results = Quote.query.filter_by(plate=plate).order_by(Quote.id.desc()).all()
     data = []
     for q in results:
@@ -112,6 +128,30 @@ from os_generator import (
     Cliente, Veiculo, ItemServico, ItemProduto, OrdemDeServico, ConfigEmpresa, gerar_os, env
 )
 # Note: PDF generation uses ReportLab (pure Python) for compatibility with minimal environments
+
+
+@app.route('/finalizados')
+def finalized_quotes():
+    """List all quotes that have been marked as finalizado (historical control)."""
+    quotes = Quote.query.filter_by(finalized=True).all()
+    return render_template('finalized.html', quotes=quotes)
+
+
+@app.route('/quote/<int:quote_id>/finalize', methods=['POST'])
+def finalize_quote(quote_id):
+    q = Quote.query.get_or_404(quote_id)
+    q.finalized = True
+    db.session.commit()
+    return redirect(url_for('finalized_quotes'))
+
+
+@app.route('/quote/<int:quote_id>/unfinalize', methods=['POST'])
+def unfinalize_quote(quote_id):
+    q = Quote.query.get_or_404(quote_id)
+    q.finalized = False
+    db.session.commit()
+    return redirect(url_for('index'))
+
 
 @app.route('/os/preview')
 def os_preview():
